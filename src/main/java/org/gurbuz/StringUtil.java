@@ -2,6 +2,7 @@ package org.gurbuz;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.util.ArrayList;
 import java.util.Base64;
 
 public class StringUtil {
@@ -27,7 +28,7 @@ public class StringUtil {
         Signature dsa;
         byte[] output = new byte[0];
         try{
-            dsa = Signature.getInstance("ECDSA", "BC");
+            dsa = Signature.getInstance("SHA256withECDSA", "SunEC");
             dsa.initSign(privateKey);
             byte[] strByte = input.getBytes();
             dsa.update(strByte);
@@ -43,7 +44,7 @@ public class StringUtil {
     public static boolean verifyECDSASig(PublicKey publicKey, String data, byte[] signature)
     {
         try{
-            Signature ecdsaVerify = Signature.getInstance("ECDSA", "BC");
+            Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA", "SunEC");
             ecdsaVerify.initVerify(publicKey);
             ecdsaVerify.update(data.getBytes());
             return ecdsaVerify.verify(signature);
@@ -54,6 +55,30 @@ public class StringUtil {
     public static String getStringFromKey(Key key)
     {
         return Base64.getEncoder().encodeToString(key.getEncoded());
+    }
+
+    public static String getMerkleRoot(ArrayList<Transaction> transactions)
+    {
+        int count = transactions.size();
+        ArrayList<String> previousTreeLayer = new ArrayList<>();
+        for(Transaction t : transactions){
+            previousTreeLayer.add(t.transactionId);
+        }
+        ArrayList<String> treeLayer = previousTreeLayer;
+        while(count > 1){
+            treeLayer = new ArrayList<>();
+            for(int i=1; i<previousTreeLayer.size();i++){
+                treeLayer.add(applySha256(previousTreeLayer.get(i-1) + previousTreeLayer.get(i)));
+            }
+            count = treeLayer.size();
+            previousTreeLayer = treeLayer;
+        }
+        return (treeLayer.size() == 1) ? treeLayer.get(0) : "";
+    }
+
+    public static String getDifficultyString(int difficulty)
+    {
+        return Integer.toString(difficulty);
     }
 }
 
